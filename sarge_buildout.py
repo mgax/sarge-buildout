@@ -14,6 +14,10 @@ def set_up_buildout(bucket, **extra):
     if not (bucket.folder / 'buildout.cfg').isfile():
         return
 
+    def bucket_run(cmd):
+        subprocess.check_call(['bin/sarge', 'run', bucket.id_, cmd],
+                              cwd=sarge.home_path)
+
     sarge = bucket.sarge
     dist = sarge.home_path / 'dist'
     cache = sarge.home_path / 'var' / 'buildout'
@@ -24,14 +28,12 @@ def set_up_buildout(bucket, **extra):
     (bucket.folder / '_sarge_buildout.cfg').write_text(sarge_buildout_cfg)
 
     python = sarge.config.get('virtualenv_python_bin', 'python')
-    subprocess.check_call([
-        python, dist / 'bootstrap.py',
-        '-c', '_sarge_buildout.cfg',
-        '-d', '--setup-source=' + dist / 'distribute_setup.py',
-        '--download-base=file://' + dist,
-        ], cwd=bucket.folder)
-    subprocess.check_call(['bin/buildout', '-c', '_sarge_buildout.cfg', '-v'],
-                          cwd=bucket.folder)
+    bucket_run('{python} {dist}/bootstrap.py '
+               '-c _sarge_buildout.cfg '
+               '-d --setup-source={dist}/distribute_setup.py '
+               '--download-base=file://{dist}'
+               .format(dist=dist, python=python))
+    bucket_run('bin/buildout -c _sarge_buildout.cfg -v')
 
 
 def initialize():
